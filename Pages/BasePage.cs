@@ -1,7 +1,7 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 
-namespace SauceDemoTests.Pages;
+namespace SeleniumTask.Pages;
 
 public abstract class BasePage
 {
@@ -24,7 +24,7 @@ public abstract class BasePage
         return wait.Until(d =>
         {
             var element = d.FindElement(locator);
-            return element.Displayed ? element : throw new WebDriverTimeoutException($"Element {locator} nie jest widoczny.");
+            return element.Displayed ? element : throw new WebDriverTimeoutException($"Element {locator} element is not visible.");
         })!;
     }
 
@@ -50,7 +50,7 @@ public abstract class BasePage
         return wait.Until(d =>
         {
             var element = d.FindElement(locator);
-            return (element.Displayed && element.Enabled) ? element : throw new WebDriverTimeoutException($"Element {locator} nie jest klikalny.");
+            return (element.Displayed && element.Enabled) ? element : throw new WebDriverTimeoutException($"Element {locator} is not clickable.");
         })!;
     }
 

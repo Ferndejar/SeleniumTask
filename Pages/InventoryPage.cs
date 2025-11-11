@@ -1,8 +1,7 @@
 using OpenQA.Selenium;
-using OpenQA.Selenium.Support.UI;
 using FluentAssertions;
 
-namespace SauceDemoTests.Pages;
+namespace SeleniumTask.Pages;
 
 public class InventoryPage : BasePage
 {

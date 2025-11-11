@@ -1,10 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
-using SauceDemoTests.Pages;
-using SauceDemoTests.Utilities;
+using SeleniumTask.Pages;
+using SeleniumTask.Utilities;
 using FluentAssertions;
 using Serilog;
-using static SauceDemoTests.Utilities.WebDriverFactory;
+using static SeleniumTask.Utilities.WebDriverFactory;
 
 namespace SeleniumTask.Tests;
 
@@ -30,7 +30,7 @@ public class SequentialLoginTests
         RunAllTestsForBrowser(BrowserType.Firefox);
     }
 
-    [TestMethod] 
+    [TestMethod]
     [TestProperty("TestCase", "All-UCs-Edge")]
     public void RunAllTestsInEdge()
     {
@@ -40,7 +40,7 @@ public class SequentialLoginTests
     private void RunAllTestsForBrowser(BrowserType browserType)
     {
         _logger.Information($"Starting all tests for {browserType}");
-        
+
         // UC-1: Empty credentials test
         using (var driver = WebDriverFactory.CreateDriver(browserType))
         {
@@ -48,16 +48,17 @@ public class SequentialLoginTests
             {
                 driver.Manage().Window.Maximize();
                 var loginPage = new LoginPage(driver);
-                
+
                 _logger.Information($"Running UC-1 in {browserType}");
                 loginPage.NavigateToLoginPage();
                 loginPage.EnterUsername("test_user");
                 loginPage.EnterPassword("test_password");
-                
 
+                // Clear fields (locator-based clear that re-finds elements)
                 loginPage.EnterUsername("");
                 loginPage.EnterPassword("");
 
+                // Then perform the click and wait as normal
                 loginPage.ClickLogin();
 
                 bool isErrorDisplayed = loginPage.IsErrorMessageDisplayed();
@@ -78,14 +79,14 @@ public class SequentialLoginTests
             {
                 driver.Manage().Window.Maximize();
                 var loginPage = new LoginPage(driver);
-                
+
                 _logger.Information($"Running UC-2 in {browserType}");
                 loginPage.NavigateToLoginPage();
                 loginPage.EnterUsername("test_user");
                 loginPage.EnterPassword("test_password");
                 loginPage.EnterPassword("");
                 loginPage.ClickLogin();
-                
+
                 bool isErrorDisplayed = loginPage.IsErrorMessageDisplayed();
                 isErrorDisplayed.Should().BeTrue("Error message should be displayed");
                 loginPage.VerifyErrorMessage("Password is required");
@@ -105,11 +106,11 @@ public class SequentialLoginTests
                 driver.Manage().Window.Maximize();
                 var loginPage = new LoginPage(driver);
                 var inventoryPage = new InventoryPage(driver);
-                
+
                 _logger.Information($"Running UC-3 in {browserType}");
                 loginPage.NavigateToLoginPage();
                 loginPage.Login("standard_user", "secret_sauce");
-                
+
                 bool isInventoryLoaded = inventoryPage.IsInventoryPageLoaded();
                 isInventoryLoaded.Should().BeTrue("Inventory page should be loaded");
                 inventoryPage.VerifyPageTitle("Products");

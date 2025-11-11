@@ -1,164 +1,144 @@
-using FluentAssertions;
+using System;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Support.UI;
+using SeleniumTask.Utilities;
 using Serilog;
-using static SauceDemoTests.Utilities.WebDriverFactory;
 
-namespace SauceDemoTests.Pages;
-
-public class LoginPage : BasePage
+namespace SeleniumTask.Pages
 {
-    // CSS Locators
-    private static By UsernameField => By.CssSelector("#user-name");
-    private static By PasswordField => By.CssSelector("#password");
-    private static By LoginButton => By.CssSelector("#login-button");
-    private static By ErrorMessage => By.CssSelector(".error-message-container");
-    private static By LoginContainer => By.CssSelector(".login_container");
-
-    private readonly ILogger _logger;
-
-    private readonly BrowserType _browserType;
-
-
-    public LoginPage(IWebDriver driver, BrowserType browserType = BrowserType.Firefox) : base(driver, 2)
+    public class LoginPage
     {
-        _browserType = browserType;
-    }
+        private readonly IWebDriver _driver;
+        private readonly string _url = "https://www.saucedemo.com/";
 
-    public LoginPage(IWebDriver driver) : base(driver, 7)
-    {
-        _logger = Log.Logger;
-    }
+        private readonly By _usernameLocator = By.Id("user-name");
+        private readonly By _passwordLocator = By.Id("password");
+        private readonly By _loginButtonLocator = By.Id("login-button");
+        private readonly By _errorLocator = By.CssSelector("[data-test='error']");
 
-    public void NavigateToLoginPage()
-    {
-        Driver.Navigate().GoToUrl("https://www.saucedemo.com/");
-        WaitForElementVisible(LoginContainer);
-    }
-
-    public void EnterUsername(string username)
-    {
-        var element = WaitForElementVisible(UsernameField);
-        ClearTextFieldRobust(element);
-        if (!string.IsNullOrEmpty(username))
+        public LoginPage(IWebDriver driver)
         {
-            element.SendKeys(username);
+            _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         }
-    }
 
-    public void EnterPassword(string password)
-    {
-        var element = WaitForElementVisible(PasswordField);
-        ClearTextFieldRobust(element);
-        if (!string.IsNullOrEmpty(password))
+        public void NavigateToLoginPage()
         {
-            element.SendKeys(password);
-        }
-    }
+            _driver.Navigate().GoToUrl(_url);
 
-    private void ClearTextFieldRobust(IWebElement element)
-    {
-        try
-        {
-            // Method 1: Standard Clear()
-            element.Clear();
-
-            // Wait a bit and check if field is actually cleared
-            Thread.Sleep(100);
-
-            // If not cleared, try other methods
-            if (!string.IsNullOrEmpty(element.GetAttribute("value")))
-            {
-                _logger.Information("Standard Clear() failed, trying alternative methods...");
-
-                // Method 2: Ctrl+A + Delete
-                element.SendKeys(Keys.Control + "a");
-                element.SendKeys(Keys.Delete);
-
-                Thread.Sleep(100);
-
-                // Method 3: Backspace repeatedly
-                if (!string.IsNullOrEmpty(element.GetAttribute("value")))
-                {
-                    string currentValue = element.GetAttribute("value");
-                    for (int i = 0; i < currentValue.Length; i++)
-                    {
-                        element.SendKeys(Keys.Backspace);
-                    }
-                }
-
-                // Method 4: JavaScript as last resort
-                if (!string.IsNullOrEmpty(element.GetAttribute("value")))
-                {
-                    ((IJavaScriptExecutor)Driver).ExecuteScript(
-                        "arguments[0].value = '';", element);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning($"Error clearing text field: {ex.Message}");
-            // Fallback to JavaScript
+            // Best-effort: disable autocomplete/ autofill and clear storage to reduce autofill interference
             try
             {
-                ((IJavaScriptExecutor)Driver).ExecuteScript(
-                    "arguments[0].value = '';", element);
+                ((IJavaScriptExecutor)_driver).ExecuteScript(
+                    "document.querySelectorAll('input,textarea').forEach(e => e.setAttribute('autocomplete', 'off'));");
+                ((IJavaScriptExecutor)_driver).ExecuteScript("window.localStorage.clear(); window.sessionStorage.clear();");
+                _driver.Manage().Cookies.DeleteAllCookies();
+                Log.Debug("NavigateToLoginPage: attempted to disable autocomplete and cleared local/session storage + cookies.");
             }
-            catch (Exception jsEx)
+            catch (Exception ex)
             {
-                _logger.Error($"JavaScript clear also failed: {jsEx.Message}");
+                Log.Debug(ex, "NavigateToLoginPage: failed to run diagnostics JS or clear storage/cookies.");
             }
         }
-    }
 
-    public void ClickLogin()
-    {
-        WaitForElementClickable(LoginButton).Click();
-    }
+        public void EnterUsername(string username)
+        {
+            ElementHelpers.ClearAndNotify(_driver, _usernameLocator);
 
-    public string GetErrorMessage()
-    {
-        var element = WaitForElementVisible(ErrorMessage, 3); // 3 second timeout for error
-        return element.Text;
-    }
+            // Ensure front-end framework (React) updates its internal state too
+            try
+            {
+                ElementHelpers.NotifyFrameworkAboutClear(_driver, _usernameLocator);
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "EnterUsername: NotifyFrameworkAboutClear failed for username.");
+            }
 
-    public void VerifyErrorMessage(string expectedError)
-    {
-        var actualError = GetErrorMessage();
-        actualError.Should().Contain(expectedError);
-    }
+            try
+            {
+                var current = _driver.FindElement(_usernameLocator).GetAttribute("value");
+                Log.Debug("EnterUsername: username after clear = '{Value}'", current);
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "EnterUsername: failed to read username after clear.");
+            }
 
-    public bool IsErrorMessageDisplayed()
-    {
-        return IsElementVisible(ErrorMessage, 3);
-    }
+            if (!string.IsNullOrEmpty(username))
+            {
+                _driver.FindElement(_usernameLocator).SendKeys(username);
+                Log.Debug("EnterUsername: sent keys to username field (length {Len}).", username.Length);
+            }
+        }
 
-    public void Login(string username, string password)
-    {
-        EnterUsername(username);
-        EnterPassword(password);
-        ClickLogin();
-    }
+        public void EnterPassword(string password)
+        {
+            ElementHelpers.ClearAndNotify(_driver, _passwordLocator);
 
-    public void ClearWithJavaScript(By locator)
-    {
-        var element = Driver.FindElement(locator);
-        IJavaScriptExecutor js = (IJavaScriptExecutor)Driver;
-        js.ExecuteScript("arguments[0].value = '';", element);
-    }
+            // Ensure front-end framework (React) updates its internal state too
+            try
+            {
+                ElementHelpers.NotifyFrameworkAboutClear(_driver, _passwordLocator);
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "EnterPassword: NotifyFrameworkAboutClear failed for password.");
+            }
 
-    public void SendTabKey()
-    {
-        // Zak³adamy, ¿e pole nazwy u¿ytkownika jest pierwsze na stronie logowania
-        var usernameElement = Driver.FindElement(UsernameField);
-        usernameElement.SendKeys(OpenQA.Selenium.Keys.Tab);
-    }
+            try
+            {
+                var current = _driver.FindElement(_passwordLocator).GetAttribute("value");
+                Log.Debug("EnterPassword: password after clear = '{Value}'", string.IsNullOrEmpty(current) ? "<empty>" : "<masked>");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "EnterPassword: failed to read password after clear.");
+            }
 
-    // Alternative: Refresh the page to ensure clean state (most reliable for Edge)
-    public void RefreshPageForCleanState()
-    {
-        Driver.Navigate().Refresh();
-        WaitForElementVisible(LoginContainer);
-        _logger.Information("Page refreshed for clean state");
+            if (!string.IsNullOrEmpty(password))
+            {
+                _driver.FindElement(_passwordLocator).SendKeys(password);
+                Log.Debug("EnterPassword: sent keys to password field (length {Len}).", password.Length);
+            }
+        }
+
+        public void ClickLogin()
+        {
+            _driver.FindElement(_loginButtonLocator).Click();
+            Log.Debug("ClickLogin: login button clicked.");
+        }
+
+        public bool IsErrorMessageDisplayed()
+        {
+            try
+            {
+                var displayed = _driver.FindElement(_errorLocator).Displayed;
+                Log.Debug("IsErrorMessageDisplayed: {Displayed}", displayed);
+                return displayed;
+            }
+            catch (NoSuchElementException)
+            {
+                Log.Debug("IsErrorMessageDisplayed: error element not found.");
+                return false;
+            }
+        }
+
+        public void VerifyErrorMessage(string expected)
+        {
+            // Read the visible error text and do a trimmed, case-insensitive substring check.
+            var actual = _driver.FindElement(_errorLocator).Text?.Trim() ?? string.Empty;
+            Log.Debug("VerifyErrorMessage: actual='{Actual}', expectedSubstring='{Expected}'", actual, expected);
+
+            if (!actual.Contains(expected, StringComparison.OrdinalIgnoreCase))
+                throw new Exception($"Expected error to contain '{expected}', but was '{actual}'");
+        }
+
+        // convenience wrapper for full-login used by UC-3
+        public void Login(string username, string password)
+        {
+            NavigateToLoginPage();
+            EnterUsername(username);
+            EnterPassword(password);
+            ClickLogin();
+        }
     }
 }

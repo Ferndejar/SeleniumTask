@@ -1,6 +1,6 @@
-using static SauceDemoTests.Utilities.WebDriverFactory;
+using static SeleniumTask.Utilities.WebDriverFactory;
 
-namespace SauceDemoTests.Utilities;
+namespace SeleniumTask.Utilities;
 
 public static class TestDataProvider
 {

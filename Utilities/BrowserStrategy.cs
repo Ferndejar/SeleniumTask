@@ -2,7 +2,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
 
-namespace SauceDemoTests.Utilities;
+namespace SeleniumTask.Utilities;
 
 public interface IBrowserStrategy
 {
