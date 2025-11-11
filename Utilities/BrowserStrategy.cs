@@ -1,0 +1,32 @@
+using OpenQA.Selenium;
+
+namespace SauceDemoTests.Utilities;
+
+public interface IBrowserStrategy
+{
+    IWebDriver CreateDriver();
+}
+
+public class FirefoxStrategy : IBrowserStrategy
+{
+    public IWebDriver CreateDriver()
+    {
+        var options = new FirefoxOptions();
+        options.AddArgument("--headless");
+        options.AddArgument("--disable-gpu");
+        options.AddArgument("--no-sandbox");
+        return new FirefoxDriver(options);
+    }
+}
+
+public class EdgeStrategy : IBrowserStrategy
+{
+    public IWebDriver CreateDriver()
+    {
+        var options = new EdgeOptions();
+        options.AddArgument("--headless");
+        options.AddArgument("--disable-gpu");
+        options.AddArgument("--no-sandbox");
+        return new EdgeDriver(options);
+    }
+}
