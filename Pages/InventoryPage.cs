@@ -4,33 +4,33 @@ using FluentAssertions;
 
 namespace SauceDemoTests.Pages;
 
-public class InventoryPage
+public class InventoryPage : BasePage
 {
-    private readonly IWebDriver _driver;
-    private readonly WebDriverWait _wait;
+    private static By PageTitle => By.CssSelector(".title");
+    private static By InventoryContainer => By.CssSelector("#inventory_container");
+    private static By BurgerMenu => By.CssSelector("#react-burger-menu-btn");
 
-    private By PageTitle => By.CssSelector(".title");
-    private By InventoryContainer => By.CssSelector("#inventory_container");
-
-    public InventoryPage(IWebDriver driver)
-    {
-        _driver = driver;
-        _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-    }
+    public InventoryPage(IWebDriver driver) : base(driver, 2) { }
 
     public void VerifyPageLoaded()
     {
-        _wait.Until(d => d.FindElement(InventoryContainer).Displayed);
+        WaitForElementVisible(InventoryContainer);
+        WaitForElementVisible(BurgerMenu);
     }
 
     public string GetPageTitle()
     {
-        return _wait.Until(d => d.FindElement(PageTitle)).Text;
+        return WaitForElementVisible(PageTitle).Text;
     }
 
     public void VerifyPageTitle(string expectedTitle)
     {
         var actualTitle = GetPageTitle();
         actualTitle.Should().Be(expectedTitle);
+    }
+
+    public bool IsInventoryPageLoaded()
+    {
+        return IsElementVisible(InventoryContainer, 5) && IsElementVisible(BurgerMenu, 5);
     }
 }

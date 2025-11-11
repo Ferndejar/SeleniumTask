@@ -1,3 +1,5 @@
+using static SauceDemoTests.Utilities.WebDriverFactory;
+
 namespace SauceDemoTests.Utilities;
 
 public static class TestDataProvider
